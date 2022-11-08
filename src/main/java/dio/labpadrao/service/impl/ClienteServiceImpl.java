@@ -1,5 +1,7 @@
 package dio.labpadrao.service.impl;
 
+import dio.labpadrao.exceptions.ResourceBadRequestException;
+import dio.labpadrao.exceptions.ResourceObjectNotFoundException;
 import dio.labpadrao.model.Cliente;
 import dio.labpadrao.model.ClienteRepository;
 import dio.labpadrao.model.Endereco;
@@ -8,8 +10,6 @@ import dio.labpadrao.service.ClienteService;
 import dio.labpadrao.service.ViaCepService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
 
 @Service
 public class ClienteServiceImpl implements ClienteService {
@@ -26,25 +26,24 @@ public class ClienteServiceImpl implements ClienteService {
     }
     @Override
     public Cliente buscarPorId(Long id) {
-        Optional<Cliente> cliente = clienteRepository.findById(id);
-        return cliente.get();
-
-        //Incluir regra de retorno
+        return clienteRepository.findById(id).orElseThrow(
+                () -> new ResourceObjectNotFoundException("Cliente não encontrado com o id = " + id));
     }
     @Override
-    public void inserir(Cliente cliente) {
+    public Cliente inserir(Cliente cliente) {
         salvarClienteComCep(cliente);
+        return cliente;
     }
 
     @Override
-    public void atualizar(Long id, Cliente cliente) {
-        Optional<Cliente> clienteBd = clienteRepository.findById(id);
-        if(clienteBd.isPresent()){
-            salvarClienteComCep(cliente);
-        }
+    public Cliente atualizar(Long id, Cliente cliente) {
+        cliente.setId(buscarPorId(id).getId());
+        salvarClienteComCep(cliente);
+        return cliente;
     }
     @Override
     public void deletar(Long id) {
+        buscarPorId(id);
         clienteRepository.deleteById(id);
     }
 
@@ -55,6 +54,11 @@ public class ClienteServiceImpl implements ClienteService {
             enderecoRepository.save(novoEndereco);
             return novoEndereco;
         });
+
+        if(endereco == null){
+            throw new ResourceBadRequestException("Endereço não encontrado para o CEP = " + cliente.getEndereco().getCep());
+        }
+
         cliente.setEndereco(endereco);
         clienteRepository.save(cliente);
     }
