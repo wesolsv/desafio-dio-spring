@@ -18,5 +18,4 @@ public class Cliente {
 
     @ManyToOne
     private Endereco endereco;
-
 }
